@@ -153,8 +153,16 @@ app.use('/upload', uploadRoutes);
 app.use('/export', exportRoutes);
 app.use('/import', importRoutes);
 
-// Health check endpoint
+// Health check endpoints (with and without /api prefix)
 app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'HeartSmiles Backend API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     message: 'HeartSmiles Backend API is running',
@@ -182,9 +190,26 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
+// 404 handler - includes debug info to help diagnose routing issues
 app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+  console.log('404 - Route not found:', {
+    path: req.path,
+    originalUrl: req.originalUrl,
+    url: req.url,
+    baseUrl: req.baseUrl,
+    method: req.method,
+    headers: req.headers
+  });
+  res.status(404).json({ 
+    error: 'Route not found',
+    debug: {
+      path: req.path,
+      originalUrl: req.originalUrl,
+      url: req.url,
+      baseUrl: req.baseUrl,
+      method: req.method
+    }
+  });
 });
 
 // Handle unhandled promise rejections (critical for serverless)
