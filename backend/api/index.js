@@ -71,18 +71,42 @@ const allowedOrigins = [
   'http://localhost:3002',
   'http://localhost:3003',
   // Production frontend URL (set via FRONTEND_URL environment variable in Vercel)
-  // Example: 'https://your-frontend-domain.vercel.app'
   process.env.FRONTEND_URL,
   // Vercel frontend URLs (automatically detected if using Vercel)
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
   process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : null,
-  // Deployed frontend URL
+  // Deployed frontend URLs - add all possible frontend URLs
   'https://heart-smiles-frontend-ri7gn79hh-sara-devis-projects.vercel.app',
+  'https://heart-smiles-frontend.vercel.app',
+  // Allow any Vercel frontend subdomain (for flexibility)
+  /^https:\/\/heart-smiles-frontend.*\.vercel\.app$/,
 ].filter(Boolean); // Remove null/undefined values
+
+console.log('CORS allowed origins:', allowedOrigins);
 
 // Configure CORS for production and development
 app.use(cors({
-  origin: allowedOrigins.length > 0 ? allowedOrigins : ['http://localhost:3000', 'http://localhost:3002'],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in allowed list
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (typeof allowed === 'string') {
+        return allowed === origin;
+      } else if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return false;
+    });
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.warn('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -124,8 +148,11 @@ app.get('/', (req, res) => {
     debug: {
       path: req.path,
       originalUrl: req.originalUrl,
-      url: req.url
-    }
+      url: req.url,
+      baseUrl: req.baseUrl,
+      method: req.method
+    },
+    note: 'If you see this, the Express app is running. Test /api/test or /test to see routing.'
   });
 });
 
@@ -234,13 +261,17 @@ app.use((req, res) => {
     url: req.url,
     baseUrl: req.baseUrl,
     method: req.method,
+    route: req.route ? req.route.path : 'no route matched',
+    params: req.params,
+    query: req.query,
     headers: {
       'content-type': req.headers['content-type'],
-      'user-agent': req.headers['user-agent']
+      'user-agent': req.headers['user-agent'],
+      'host': req.headers['host']
     }
   };
   
-  console.log('404 - Route not found:', debugInfo);
+  console.log('404 - Route not found:', JSON.stringify(debugInfo, null, 2));
   
   res.status(404).json({ 
     error: 'Route not found',
@@ -253,7 +284,8 @@ app.use((req, res) => {
       'GET /health',
       'POST /api/auth/login',
       'POST /auth/login'
-    ]
+    ],
+    note: 'Check the debug object to see what path Express received'
   });
 });
 
