@@ -116,14 +116,27 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Debug middleware - log all incoming requests (remove in production if needed)
+// Debug middleware - log all incoming requests and fix path if needed
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`, {
+  const originalPath = req.path;
+  const originalUrl = req.originalUrl;
+  
+  console.log(`[${new Date().toISOString()}] ${req.method}`, {
+    path: req.path,
     originalUrl: req.originalUrl,
     url: req.url,
     baseUrl: req.baseUrl,
     query: req.query
   });
+  
+  // Vercel might be passing paths without /api prefix when routing /api/(.*)
+  // If the path doesn't start with /api but the originalUrl does, fix it
+  if (originalUrl.startsWith('/api/') && !req.path.startsWith('/api/')) {
+    console.log('Fixing path: adding /api prefix');
+    req.url = '/api' + req.path + (req.url.includes('?') ? req.url.substring(req.path.length) : '');
+    req.originalUrl = '/api' + req.originalUrl;
+  }
+  
   next();
 });
 
