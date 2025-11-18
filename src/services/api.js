@@ -2,12 +2,31 @@ import axios from 'axios';
 
 // Determine the base URL based on environment
 // Production (Vercel) backend URL
-const PRODUCTION_API_URL = 'https://heart-smiles-backend-deployment-9cfleq7ub-sara-devis-projects.vercel.app/api';
+const PRODUCTION_API_URL = 'https://heart-smiles-backend-deployment-ipk2dq43h-sara-devis-projects.vercel.app/api';
 // Local development URL
 const LOCAL_API_URL = 'http://localhost:5001/api';
 
+// Helper function to normalize URL (remove duplicate https://, ensure /api suffix)
+const normalizeURL = (url) => {
+  if (!url) return url;
+  // Remove duplicate https://
+  let normalized = url.replace(/https?:\/\/https?:\/\//g, 'https://');
+  // Ensure it starts with http:// or https://
+  if (!normalized.match(/^https?:\/\//)) {
+    normalized = 'https://' + normalized.replace(/^https?:\/\//, '');
+  }
+  // Remove trailing slash and ensure /api suffix for production URLs
+  normalized = normalized.replace(/\/$/, '');
+  // If it's a Vercel URL and doesn't end with /api, add it
+  if (normalized.includes('vercel.app') && !normalized.endsWith('/api')) {
+    normalized = normalized + '/api';
+  }
+  return normalized;
+};
+
 // Use environment variable if set, otherwise use production URL in production, localhost in development
-const baseURL = process.env.REACT_APP_API_BASE_URL || 
+const envURL = process.env.REACT_APP_API_BASE_URL;
+const baseURL = envURL ? normalizeURL(envURL) : 
   (process.env.NODE_ENV === 'production' ? PRODUCTION_API_URL : LOCAL_API_URL);
 
 console.log('API Base URL configured as:', baseURL);

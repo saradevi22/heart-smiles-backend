@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { loginUser } from '../services/api';
+import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const { login } = useAuth();
@@ -37,7 +38,9 @@ export default function Login() {
       console.error('Error message:', err.message);
       console.error('Error response:', err?.response?.data);
       console.error('Error status:', err?.response?.status);
-      console.error('API Base URL:', process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001/api');
+      // Get the actual base URL being used by the API
+      const actualBaseURL = api.defaults.baseURL || process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001/api';
+      console.error('API Base URL:', actualBaseURL);
       
       // Handle different error response formats
       let errorMessage = 'Login failed';
@@ -48,7 +51,7 @@ export default function Login() {
         if (err.code === 'ECONNREFUSED') {
           errorMessage = 'Cannot connect to server. Please make sure the backend is running on http://localhost:5001. Check the browser console for more details.';
         } else if (err.code === 'ERR_NETWORK' || err.message?.includes('Network Error')) {
-          errorMessage = `Network error: Cannot reach the server at ${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001/api'}. Please check if the backend server is running.`;
+          errorMessage = `Network error: Cannot reach the server at ${actualBaseURL}. Please check if the backend server is running.`;
         } else if (err.code === 'ERR_CORS') {
           errorMessage = 'CORS error: The server is not allowing requests from this origin. Please check CORS configuration.';
         } else if (err.code === 'ETIMEDOUT' || err.code === 'ECONNABORTED') {
