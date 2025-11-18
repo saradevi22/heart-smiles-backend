@@ -161,23 +161,32 @@ app.get('/favicon.png', (req, res) => {
 
 // Routes
 // Mount routes with /api prefix (works for both local and Vercel)
-app.use('/api/auth', authRoutes);
-app.use('/api/participants', participantRoutes);
-app.use('/api/programs', programRoutes);
-app.use('/api/staff', staffRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/export', exportRoutes);
-app.use('/api/import', importRoutes);
+console.log('Mounting routes...');
+try {
+  app.use('/api/auth', authRoutes);
+  app.use('/api/participants', participantRoutes);
+  app.use('/api/programs', programRoutes);
+  app.use('/api/staff', staffRoutes);
+  app.use('/api/upload', uploadRoutes);
+  app.use('/api/export', exportRoutes);
+  app.use('/api/import', importRoutes);
+  console.log('Routes with /api prefix mounted successfully');
 
-// Also mount routes without /api prefix as fallback (in case Vercel strips it)
-// This ensures routes work regardless of how Vercel routes the request
-app.use('/auth', authRoutes);
-app.use('/participants', participantRoutes);
-app.use('/programs', programRoutes);
-app.use('/staff', staffRoutes);
-app.use('/upload', uploadRoutes);
-app.use('/export', exportRoutes);
-app.use('/import', importRoutes);
+  // Also mount routes without /api prefix as fallback (in case Vercel strips it)
+  // This ensures routes work regardless of how Vercel routes the request
+  app.use('/auth', authRoutes);
+  app.use('/participants', participantRoutes);
+  app.use('/programs', programRoutes);
+  app.use('/staff', staffRoutes);
+  app.use('/upload', uploadRoutes);
+  app.use('/export', exportRoutes);
+  app.use('/import', importRoutes);
+  console.log('Routes without /api prefix mounted successfully');
+  console.log('All routes mounted. App ready to handle requests.');
+} catch (error) {
+  console.error('Error mounting routes:', error);
+  throw error;
+}
 
 // Health check endpoints (with and without /api prefix)
 app.get('/api/health', (req, res) => {
@@ -217,24 +226,34 @@ app.use((err, req, res, next) => {
 });
 
 // 404 handler - includes debug info to help diagnose routing issues
-app.use('*', (req, res) => {
-  console.log('404 - Route not found:', {
+// This MUST be the last route handler
+app.use((req, res) => {
+  const debugInfo = {
     path: req.path,
     originalUrl: req.originalUrl,
     url: req.url,
     baseUrl: req.baseUrl,
     method: req.method,
-    headers: req.headers
-  });
+    headers: {
+      'content-type': req.headers['content-type'],
+      'user-agent': req.headers['user-agent']
+    }
+  };
+  
+  console.log('404 - Route not found:', debugInfo);
+  
   res.status(404).json({ 
     error: 'Route not found',
-    debug: {
-      path: req.path,
-      originalUrl: req.originalUrl,
-      url: req.url,
-      baseUrl: req.baseUrl,
-      method: req.method
-    }
+    debug: debugInfo,
+    availableRoutes: [
+      'GET /',
+      'GET /test',
+      'GET /api/test',
+      'GET /api/health',
+      'GET /health',
+      'POST /api/auth/login',
+      'POST /auth/login'
+    ]
   });
 });
 
