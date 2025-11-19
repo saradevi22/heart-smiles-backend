@@ -77,6 +77,7 @@ const allowedOrigins = [
   process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : null,
   // Deployed frontend URLs - add all possible frontend URLs
   'https://heart-smiles-frontend-ri7gn79hh-sara-devis-projects.vercel.app',
+  'https://heart-smiles-frontend-gtl422eh0-sara-devis-projects.vercel.app',
   'https://heart-smiles-frontend.vercel.app',
   // Allow any Vercel frontend subdomain (for flexibility)
   /^https:\/\/heart-smiles-frontend.*\.vercel\.app$/,
@@ -86,7 +87,44 @@ const allowedOrigins = [
 
 console.log('CORS allowed origins:', allowedOrigins);
 
-// Configure CORS for production and development
+// Helper function to check if origin is allowed
+const isOriginAllowed = (origin) => {
+  if (!origin) return true; // Allow requests with no origin
+  
+  return allowedOrigins.some(allowed => {
+    if (typeof allowed === 'string') {
+      return allowed === origin;
+    } else if (allowed instanceof RegExp) {
+      return allowed.test(origin);
+    }
+    return false;
+  });
+};
+
+// Handle OPTIONS preflight requests FIRST (before CORS middleware)
+// This ensures preflight requests always get proper headers
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  console.log('OPTIONS preflight request:', req.path, 'from origin:', origin);
+  
+  // Check if origin should be allowed
+  const isAllowed = isOriginAllowed(origin) || process.env.NODE_ENV === 'development';
+  
+  if (isAllowed) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400');
+    console.log('OPTIONS preflight: Allowed origin:', origin);
+    res.status(204).end();
+  } else {
+    console.warn('OPTIONS preflight: Blocked origin:', origin);
+    res.status(403).json({ error: 'CORS preflight blocked' });
+  }
+});
+
+// Configure CORS for production and development (for actual requests)
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -98,18 +136,7 @@ app.use(cors({
     console.log('CORS: Checking origin:', origin);
     
     // Check if origin is in allowed list
-    const isAllowed = allowedOrigins.some(allowed => {
-      if (typeof allowed === 'string') {
-        const matches = allowed === origin;
-        if (matches) console.log('CORS: Matched string origin:', allowed);
-        return matches;
-      } else if (allowed instanceof RegExp) {
-        const matches = allowed.test(origin);
-        if (matches) console.log('CORS: Matched regex origin:', allowed.toString());
-        return matches;
-      }
-      return false;
-    });
+    const isAllowed = isOriginAllowed(origin);
     
     if (isAllowed) {
       console.log('CORS: Allowing origin:', origin);
