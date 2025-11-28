@@ -65,6 +65,7 @@ app.use(limiter);
 
 // CORS configuration - supports both local development and Vercel deployment
 // Add your frontend URLs here (both local and production)
+/*
 const allowedOrigins = [
   // Local development URLs
   'http://localhost:3000',
@@ -100,6 +101,14 @@ const isOriginAllowed = (origin) => {
     return false;
   });
 };
+*/
+
+// Configure CORS for production
+app.use(cors({
+  origin: ['http://localhost:3002', 'https://heart-smiles-frontend.vercel.app'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Handle OPTIONS preflight requests FIRST (before CORS middleware)
 // This ensures preflight requests always get proper headers
@@ -123,7 +132,7 @@ app.options('*', (req, res) => {
     res.status(403).json({ error: 'CORS preflight blocked' });
   }
 });
-
+/*
 // Configure CORS for production and development (for actual requests)
 app.use(cors({
   origin: function (origin, callback) {
@@ -169,6 +178,7 @@ app.use(cors({
   preflightContinue: false,
   optionsSuccessStatus: 204
 }));
+*/
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
